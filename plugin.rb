@@ -2,7 +2,7 @@
 
 # name: discourse-laliga-matchday
 # about: Posts an automatic preview topic before each La Liga matchday (all fixtures, kickoff times, current table) and a review topic once the round finishes (results, updated standings, top scorers).
-# version: 0.2.0
+# version: 0.2.1
 # authors: Chris Lail
 # url: https://forum.monchismen.com
 

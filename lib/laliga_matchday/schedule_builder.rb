@@ -58,20 +58,23 @@ module ::LaligaMatchday
       }
     end
 
-    # final    — every match resolved
-    # live     — at least one match in progress
-    # confirmed— all kickoffs locked in by La Liga
-    # tbc      — none confirmed yet
-    # mixed    — partially confirmed
+    # final       — every match resolved
+    # live        — at least one match in progress
+    # confirmed   — every kickoff locked in
+    # provisional — times published but not yet locked in
+    # tbc         — no times at all yet
+    #
+    # Note: football-data.org reports SCHEDULED for La Liga fixtures that
+    # already carry a real, specific kickoff time — it only flips to TIMED
+    # close to the match. So SCHEDULED means "provisional", NOT "unknown";
+    # treating it as unknown hides times we actually have.
     def round_state(matches)
       return "final" if matches.all? { |m| RESOLVED_STATUSES.include?(m[:status]) }
       return "live" if matches.any? { |m| %w[IN_PLAY PAUSED].include?(m[:status]) }
+      return "tbc" if matches.none? { |m| m[:has_time] }
+      return "confirmed" if matches.all? { |m| m[:confirmed] }
 
-      confirmed = matches.count { |m| m[:confirmed] }
-      return "confirmed" if confirmed == matches.size
-      return "tbc" if confirmed.zero?
-
-      "mixed"
+      "provisional"
     end
 
     def serialize_match(match)
@@ -79,11 +82,16 @@ module ::LaligaMatchday
       away = match["awayTeam"] || {}
       status = match["status"]
 
+      has_time = match["utcDate"].present?
+
       {
         id: match["id"],
         utc_date: match["utcDate"],
         status: status,
+        has_time: has_time,
         confirmed: CONFIRMED_STATUSES.include?(status),
+        # A real time exists but La Liga may still move it.
+        provisional: has_time && !CONFIRMED_STATUSES.include?(status),
         played: PLAYED_STATUSES.include?(status),
         involves_club: [home["id"].to_s, away["id"].to_s].include?(@team_id),
         home: serialize_team(home),
