@@ -1,0 +1,14 @@
+en:
+  site_settings:
+    laliga_matchday_enabled: "Enable automatic La Liga matchday preview and review topics."
+    laliga_matchday_api_key: "football-data.org API key. The free tier is sufficient — this plugin uses about 3 requests per run. You can reuse the same key as the La Liga sidebar plugin."
+    laliga_matchday_category_id: "Category the matchday preview and review topics are posted to. Required — nothing is posted until this is set."
+    laliga_matchday_competition_code: "football-data.org competition code (PD = La Liga / Primera División)."
+    laliga_matchday_season: "Season start year, e.g. 2026 for the 2026-27 season. Leave blank to detect automatically."
+    laliga_matchday_team_id: "football-data.org team ID for your club (559 = Sevilla FC). Used to highlight your club's fixture and league position."
+    laliga_matchday_post_preview: "Post a preview topic before each matchday begins."
+    laliga_matchday_post_review: "Post a review topic once every match in a matchday has finished."
+    laliga_matchday_preview_hours_before: "How many hours before the matchday's first kickoff to post the preview (default 48)."
+    laliga_matchday_timezones: "Comma-separated timezones to show kickoff times in. The first is treated as primary and shown with the full date."
+    laliga_matchday_standings_rows: "How many rows of the league table to include (your club is always shown even if outside this range)."
+    laliga_matchday_tags: "Comma-separated tags applied to each posted topic."

@@ -1,0 +1,54 @@
+plugins:
+  laliga_matchday_enabled:
+    client: true
+    default: false
+
+  laliga_matchday_api_key:
+    client: false
+    secret: true
+    default: ""
+
+  laliga_matchday_category_id:
+    client: false
+    type: category
+    default: ""
+
+  laliga_matchday_competition_code:
+    client: false
+    default: "PD"
+
+  laliga_matchday_season:
+    client: false
+    default: ""
+
+  laliga_matchday_team_id:
+    client: false
+    default: "559"
+
+  laliga_matchday_post_preview:
+    client: false
+    default: true
+
+  laliga_matchday_post_review:
+    client: false
+    default: true
+
+  laliga_matchday_preview_hours_before:
+    client: false
+    default: 48
+    min: 1
+    max: 336
+
+  laliga_matchday_timezones:
+    client: false
+    default: "Europe/Madrid,America/New_York,America/Los_Angeles"
+
+  laliga_matchday_standings_rows:
+    client: false
+    default: 10
+    min: 3
+    max: 20
+
+  laliga_matchday_tags:
+    client: false
+    default: "la-liga,matchday"
