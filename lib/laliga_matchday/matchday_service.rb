@@ -129,9 +129,35 @@ module ::LaligaMatchday
     def fetch_standings
       payload = @client.standings(competition: @competition, season: @season)
       return nil if payload.blank?
+      return nil if standings_stale?(payload)
 
       total = (payload["standings"] || []).find { |s| s["type"] == "TOTAL" }
       total && total["table"]
+    end
+
+    # Before a season kicks off, football-data.org returns the previous
+    # season's completed table wrapped in the *new* season's metadata. A
+    # preview post that embeds it would tell readers every club has already
+    # played 38 games on matchday 1, so drop it instead — PostBuilder
+    # simply omits the table section when standings are nil.
+    def standings_stale?(payload)
+      table = payload.dig("standings", 0, "table")
+      return true if table.blank?
+
+      season = payload["season"] || {}
+
+      start_date =
+        begin
+          season["startDate"].present? ? Date.parse(season["startDate"].to_s) : nil
+        rescue ArgumentError, TypeError
+          nil
+        end
+      return true if start_date && start_date > Date.current
+
+      current_matchday = season["currentMatchday"].to_i
+      max_played = table.map { |row| row["playedGames"].to_i }.max.to_i
+
+      current_matchday.positive? && max_played > current_matchday + 1
     end
 
     def fetch_scorers
