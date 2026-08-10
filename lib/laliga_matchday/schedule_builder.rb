@@ -9,6 +9,12 @@ module ::LaligaMatchday
   # any server-side configuration, which matters for a US-based audience
   # following a Spanish league.
   class ScheduleBuilder
+    # Bump whenever the serialized shape changes. The controller compares
+    # this against the cached payload and rebuilds on mismatch — otherwise
+    # a cache written by an older version keeps being served until the
+    # scheduled job next runs, which can be hours after a deploy.
+    SCHEMA_VERSION = 2
+
     CONFIRMED_STATUSES = %w[TIMED IN_PLAY PAUSED FINISHED AWARDED SUSPENDED].freeze
     PLAYED_STATUSES = %w[FINISHED AWARDED].freeze
     RESOLVED_STATUSES = %w[FINISHED AWARDED POSTPONED CANCELLED SUSPENDED].freeze
@@ -27,6 +33,7 @@ module ::LaligaMatchday
           .sort_by { |matchday, _| matchday.to_i }
 
       {
+        schema_version: SCHEMA_VERSION,
         season: @season,
         season_label: season_label,
         competition: @competition,

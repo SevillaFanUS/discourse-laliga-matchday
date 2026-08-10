@@ -20,9 +20,21 @@ class LaligaScheduleController < ::ApplicationController
 
     cached = PluginStore.get(::LaligaMatchday::PLUGIN_NAME, ::Jobs::LaligaScheduleCache::CACHE_KEY)
 
-    # First request before the scheduled job has ever run — build it now so
-    # the page isn't empty on install.
+    # Discard a payload written by an older version of the serializer —
+    # without this, a deploy that changes the shape keeps serving stale
+    # data until the 6-hourly job next runs. PluginStore round-trips
+    # through JSON, so keys come back as strings.
+    outdated = cached && cached["schema_version"].to_i != ::LaligaMatchday::ScheduleBuilder::SCHEMA_VERSION
+    fallback = outdated ? cached : nil
+    cached = nil if outdated
+
+    # Also covers the first request after install, before the scheduled
+    # job has ever run.
     cached ||= ::Jobs::LaligaScheduleCache.refresh! if SiteSetting.laliga_matchday_api_key.present?
+
+    # If the rebuild failed (API down, rate limited), an outdated payload
+    # still beats an empty page.
+    cached ||= fallback
 
     if cached
       render json: cached
