@@ -27,15 +27,32 @@ and uses each round's actual first and last kickoff.
 
 - **Preview** fires when a round's first kickoff falls inside the next
   `laliga_matchday_preview_hours_before` hours (default 48).
-- **Review** fires once every match in the round has reached a resolved
-  status, plus a 2-hour settle window so late score corrections land
-  before the table is snapshotted. A postponed fixture counts as
-  resolved — otherwise one deferred game would block the review forever.
-- Posted matchdays are tracked in `PluginStore`, keyed by competition
-  **and season**, so a new season starts clean rather than thinking
-  matchday 1 was already covered last year.
-- Reviews older than 7 days are skipped, so installing mid-season
-  doesn't backfill the entire year in one go.
+- **Review** is a **single live post per matchday**, not a one-shot
+  summary. It goes up as soon as the first match of the round finishes,
+  then the same post is edited in place as the rest of the results come
+  in. Unplayed fixtures show their kickoff time rather than a dash, and a
+  progress line reads "3 of 10 matches played".
+
+  This design exists because La Liga rounds sprawl — matchday 1 of
+  2026/27 runs 15–27 August. Waiting for every match to resolve would put
+  the results post nearly two weeks late, arriving after matchdays 2 and
+  3 had already been previewed. Several rounds can be live at once, so
+  every eligible round is synced each run.
+
+  Once the round is fully resolved (plus a 2-hour settle window for late
+  score corrections) the post is marked *Final* and bumped once. Before
+  that, edits are silent so the topic isn't pushed to the top of Latest
+  every few hours.
+
+- **Nothing is written unless something changed.** Each run fingerprints
+  the rendered body and compares it to the last version; identical means
+  no edit. The "updated" timestamp is deliberately excluded from that
+  fingerprint, otherwise every check would look like a change.
+- State is tracked in `PluginStore`, keyed by competition **and season**,
+  so a new season starts clean rather than thinking matchday 1 was
+  already covered last year.
+- Rounds whose first kickoff is more than 21 days ago are ignored, so
+  installing mid-season doesn't backfill the entire year.
 
 Topics are posted as the Discourse system user.
 

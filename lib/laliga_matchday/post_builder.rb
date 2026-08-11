@@ -47,9 +47,17 @@ module ::LaligaMatchday
       parts.join("\n")
     end
 
-    def review_body(matchday:, matches:, standings:, scorers:, season_label:)
+    # Rendered repeatedly as a round plays out — the same post is edited
+    # in place rather than a new one being created per result, so the
+    # body has to read sensibly whether 1 of 10 matches are in or all of
+    # them.
+    def review_body(matchday:, matches:, standings:, scorers:, season_label:, complete: false, updated_at: nil)
+      played = matches.count { |m| PLAYED_STATUSES.include?(m["status"]) }
+
       parts = []
       parts << "## #{@competition_label} Matchday #{matchday} Results — #{season_label}"
+      parts << ""
+      parts << progress_line(played, matches.size, complete, updated_at)
       parts << ""
       parts << results_table(matches)
 
@@ -68,6 +76,16 @@ module ::LaligaMatchday
       end
 
       parts.join("\n")
+    end
+
+    def progress_line(played, total, complete, updated_at)
+      stamp = updated_at ? " · updated #{updated_at.strftime("%-d %b, %-I:%M %p")}" : ""
+
+      if complete
+        "*Final — all #{total} matches played#{stamp}.*"
+      else
+        "*#{played} of #{total} matches played. This post updates as results come in#{stamp}.*"
+      end
     end
 
     # --- tables -----------------------------------------------------------
@@ -196,13 +214,26 @@ module ::LaligaMatchday
         "Postponed"
       when "CANCELLED"
         "Cancelled"
+      when "IN_PLAY", "PAUSED"
+        home = match.dig("score", "fullTime", "home")
+        away = match.dig("score", "fullTime", "away")
+        home.nil? || away.nil? ? "In progress" : "#{home}–#{away} *(live)*"
       when *PLAYED_STATUSES
         home = match.dig("score", "fullTime", "home")
         away = match.dig("score", "fullTime", "away")
         home.nil? || away.nil? ? "—" : "#{home}–#{away}"
       else
-        "—"
+        # Not played yet. Showing the kickoff beats a bare dash while the
+        # round is still in progress — La Liga rounds can sprawl over a
+        # fortnight, so "still to come" is genuinely useful information.
+        utc = parse_time(match["utcDate"])
+        return "—" if utc.blank?
+
+        local = utc.in_time_zone(@timezones.first)
+        "#{local.strftime("%-d %b, %-I:%M %p")} #{local.zone}"
       end
+    rescue ArgumentError, TypeError
+      "—"
     end
 
     def parse_time(value)

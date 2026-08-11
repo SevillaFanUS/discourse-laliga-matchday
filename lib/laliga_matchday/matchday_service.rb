@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 module ::LaligaMatchday
   # Works out which matchday (if any) is due a preview or a review right
   # now, and posts it.
@@ -15,11 +17,16 @@ module ::LaligaMatchday
     # single deferred fixture would block the review indefinitely.
     RESOLVED_STATUSES = %w[FINISHED AWARDED POSTPONED CANCELLED SUSPENDED].freeze
 
-    # Don't backfill an entire season's reviews the first time this runs.
-    REVIEW_MAX_AGE_DAYS = 7
+    PLAYED_STATUSES = %w[FINISHED AWARDED].freeze
 
-    # Wait a little after the last final whistle so late score corrections
-    # land before we snapshot the table.
+    # How far back to keep syncing a round's live results post. Long
+    # enough to cover a sprawling round (matchday 1 of 2026/27 runs
+    # 15–27 August), short enough that installing mid-season doesn't
+    # backfill the whole year.
+    REVIEW_WINDOW_DAYS = 21
+
+    # Wait a little after the last final whistle before declaring a round
+    # complete, so late score corrections land first.
     REVIEW_SETTLE_HOURS = 2
 
     def initialize
@@ -36,7 +43,7 @@ module ::LaligaMatchday
       return if rounds.blank?
 
       post_preview(rounds, now) if SiteSetting.laliga_matchday_post_preview
-      post_review(rounds, now) if SiteSetting.laliga_matchday_post_review
+      sync_reviews(rounds, now) if SiteSetting.laliga_matchday_post_review
     end
 
     # Handy for checking output from the rails console without posting:
@@ -199,35 +206,107 @@ module ::LaligaMatchday
 
     # --- review -----------------------------------------------------------
 
-    def post_review(rounds, now)
-      already = posted_matchdays("reviewed_matchdays")
+    # The review is a single live post per matchday rather than a one-shot
+    # summary. It goes up as soon as the first match of the round
+    # finishes, then gets edited in place as the rest come in.
+    #
+    # This exists because La Liga rounds sprawl: matchday 1 of 2026/27
+    # runs 15–27 August. Waiting for every match to resolve would put the
+    # results post two weeks behind, arriving after matchday 2 and 3 had
+    # already been previewed. Several rounds can be mid-flight at once, so
+    # this syncs all eligible rounds, not just one.
+    def sync_reviews(rounds, now)
+      state = review_state
 
-      candidate =
-        rounds
-          .values
-          .reject { |r| already.include?(r[:matchday]) }
-          .select { |r| r[:resolved] && r[:last_kickoff].present? }
-          .select { |r| r[:last_kickoff] < now - REVIEW_SETTLE_HOURS.hours }
-          .select { |r| r[:last_kickoff] > now - REVIEW_MAX_AGE_DAYS.days }
-          .min_by { |r| r[:matchday] }
+      eligible = rounds.values.select { |round| review_eligible?(round, now, state) }
+      return if eligible.empty?
 
-      return if candidate.blank?
+      # Only pay for these once per run, however many rounds are active.
+      standings = fetch_standings
+      scorers = fetch_scorers
+
+      eligible.each { |round| sync_review(round, standings, scorers, now, state) }
+
+      write_review_state(state)
+    end
+
+    def review_eligible?(round, now, state)
+      return false if round[:first_kickoff].blank?
+      return false if round[:first_kickoff] > now
+
+      # Finished rounds stay put — no need to keep re-rendering them.
+      entry = state[round[:matchday].to_s]
+      return false if entry && entry["complete"]
+
+      # Don't reach back and start posting reviews for an entire season on
+      # first install.
+      return false if round[:first_kickoff] < now - REVIEW_WINDOW_DAYS.days
+
+      round[:matches].any? { |m| PLAYED_STATUSES.include?(m["status"]) }
+    end
+
+    def sync_review(round, standings, scorers, now, state)
+      matchday = round[:matchday]
+      key = matchday.to_s
+      entry = state[key] || {}
+
+      complete = round[:resolved] && round[:last_kickoff].present? &&
+        round[:last_kickoff] < now - REVIEW_SETTLE_HOURS.hours
 
       body =
         builder.review_body(
-          matchday: candidate[:matchday],
-          matches: candidate[:matches],
-          standings: fetch_standings,
-          scorers: fetch_scorers,
+          matchday: matchday,
+          matches: round[:matches],
+          standings: standings,
+          scorers: scorers,
           season_label: season_label,
+          complete: complete,
+          updated_at: now,
         )
 
-      create_topic(
-        title: builder.review_title(matchday: candidate[:matchday], season_label: season_label),
-        raw: body,
-      )
+      # The "updated" timestamp changes every run, so it's excluded from
+      # the fingerprint — otherwise every check would look like a change
+      # and the post would be rewritten hourly for no reason.
+      digest = Digest::MD5.hexdigest(body.sub(/^\*.*\*$/, ""))
 
-      mark_posted("reviewed_matchdays", candidate[:matchday])
+      if entry["post_id"].blank?
+        post = create_topic(title: builder.review_title(matchday: matchday, season_label: season_label), raw: body)
+        state[key] = { "topic_id" => post.topic_id, "post_id" => post.id, "digest" => digest, "complete" => complete }
+        return
+      end
+
+      return if entry["digest"] == digest && entry["complete"] == complete
+
+      # Silent edit while the round is in progress; bump when it goes
+      # final so the completed results resurface once.
+      became_final = complete && !entry["complete"]
+      update_post(entry["post_id"], body, bump: became_final)
+
+      state[key] = entry.merge("digest" => digest, "complete" => complete)
+    end
+
+    def update_post(post_id, body, bump:)
+      post = Post.find_by(id: post_id)
+      if post.nil?
+        Rails.logger.warn("[#{::LaligaMatchday::PLUGIN_NAME}] review post #{post_id} is gone; skipping update")
+        return
+      end
+
+      PostRevisor.new(post, post.topic).revise!(
+        Discourse.system_user,
+        { raw: body },
+        skip_validations: true,
+        bypass_bump: !bump,
+        edit_reason: "Results updated",
+      )
+    end
+
+    def review_state
+      PluginStore.get(::LaligaMatchday::PLUGIN_NAME, state_key("reviews")) || {}
+    end
+
+    def write_review_state(state)
+      PluginStore.set(::LaligaMatchday::PLUGIN_NAME, state_key("reviews"), state)
     end
 
     # --- posting / state --------------------------------------------------
