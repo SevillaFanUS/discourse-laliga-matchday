@@ -13,7 +13,7 @@ module ::LaligaMatchday
     # this against the cached payload and rebuilds on mismatch — otherwise
     # a cache written by an older version keeps being served until the
     # scheduled job next runs, which can be hours after a deploy.
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
 
     CONFIRMED_STATUSES = %w[TIMED IN_PLAY PAUSED FINISHED AWARDED SUSPENDED].freeze
     PLAYED_STATUSES = %w[FINISHED AWARDED].freeze
@@ -26,6 +26,8 @@ module ::LaligaMatchday
     end
 
     def build(matches)
+      @topic_ids = topic_id_lookup(matches)
+
       grouped =
         matches
           .group_by { |m| m["matchday"] }
@@ -45,6 +47,30 @@ module ::LaligaMatchday
     end
 
     private
+
+    # The fixtures plugin (discourse-sevilla-fixtures) already creates
+    # match threads and records the topic id against the same
+    # football-data.org match id we're working with, so the two can be
+    # joined here to link the schedule through to discussion.
+    #
+    # Looked up in one query rather than per match, and guarded so this
+    # plugin still works standalone if the fixtures plugin isn't
+    # installed.
+    def topic_id_lookup(matches)
+      return {} unless defined?(::SevillaFixture)
+
+      external_ids = matches.filter_map { |m| m["id"] }
+      return {} if external_ids.empty?
+
+      ::SevillaFixture
+        .where(external_id: external_ids)
+        .where.not(discourse_topic_id: nil)
+        .pluck(:external_id, :discourse_topic_id)
+        .to_h
+    rescue => e
+      Rails.logger.warn("[#{::LaligaMatchday::PLUGIN_NAME}] topic id lookup failed: #{e.message}")
+      {}
+    end
 
     def season_label
       start_year = @season.to_i
@@ -100,6 +126,7 @@ module ::LaligaMatchday
         # A real time exists but La Liga may still move it.
         provisional: has_time && !CONFIRMED_STATUSES.include?(status),
         played: PLAYED_STATUSES.include?(status),
+        topic_id: @topic_ids && @topic_ids[match["id"]],
         involves_club: [home["id"].to_s, away["id"].to_s].include?(@team_id),
         home: serialize_team(home),
         away: serialize_team(away),
