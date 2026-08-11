@@ -2,7 +2,7 @@
 
 # name: discourse-laliga-matchday
 # about: Posts an automatic preview topic before each La Liga matchday (all fixtures, kickoff times, current table) and a review topic once the round finishes (results, updated standings, top scorers).
-# version: 0.4.0
+# version: 0.4.1
 # authors: Chris Lail
 # url: https://forum.monchismen.com
 
@@ -28,8 +28,13 @@ after_initialize do
   Discourse::Application.routes.append do
     # Renders the Ember app shell so this is a real page with forum chrome;
     # the theme component paints the schedule into it.
-    get "/laliga-schedule" => "laliga_schedule#index"
-    get "/laliga-schedule/data.json" => "laliga_schedule#data"
-    get "/laliga-schedule.ics" => "laliga_schedule#ics", :defaults => { format: "ics" }
+    # Order and `format: false` both matter here. Rails appends an
+    # optional "(.:format)" segment to a path, so "/laliga-schedule"
+    # happily matches "/laliga-schedule.ics" and serves the HTML page —
+    # which is exactly what happened the first time round. Declaring the
+    # feed first, and making both paths literal, keeps them distinct.
+    get "/laliga-schedule.ics" => "laliga_schedule#ics", :format => false
+    get "/laliga-schedule/data.json" => "laliga_schedule#data", :format => false
+    get "/laliga-schedule" => "laliga_schedule#index", :format => false
   end
 end
