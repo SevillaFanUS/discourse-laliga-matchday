@@ -1,0 +1,142 @@
+{
+  "_note": "Successive polls of one ESPN esp.1 scoreboard, modelled field-for-field on a real captured response. Each snapshot is what a poll would return at that point in the match.",
+
+  "pre": {
+    "events": [{
+      "id": "700001",
+      "date": "2026-09-20T19:00Z",
+      "competitions": [{
+        "date": "2026-09-20T19:00Z",
+        "status": { "displayClock": "0'", "type": { "id": "1", "name": "STATUS_SCHEDULED", "state": "pre", "completed": false, "detail": "20/9 - 21:00 CEST" } },
+        "competitors": [
+          { "id": "243", "homeAway": "home", "winner": false, "score": "0", "team": { "id": "243", "displayName": "Sevilla" } },
+          { "id": "2922", "homeAway": "away", "winner": false, "score": "0", "team": { "id": "2922", "displayName": "Getafe" } }
+        ],
+        "details": []
+      }]
+    }]
+  },
+
+  "first_half": {
+    "events": [{
+      "id": "700001",
+      "date": "2026-09-20T19:00Z",
+      "competitions": [{
+        "date": "2026-09-20T19:00Z",
+        "status": { "displayClock": "31'", "type": { "id": "2", "name": "STATUS_FIRST_HALF", "state": "in", "completed": false, "detail": "31'" } },
+        "competitors": [
+          { "id": "243", "homeAway": "home", "score": "1", "team": { "id": "243", "displayName": "Sevilla" } },
+          { "id": "2922", "homeAway": "away", "score": "0", "team": { "id": "2922", "displayName": "Getafe" } }
+        ],
+        "details": [
+          { "type": { "id": "94", "text": "Yellow Card" }, "clock": { "displayValue": "12'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": false, "yellowCard": true, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "23'" }, "team": { "id": "243" }, "scoreValue": 1, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "2", "displayName": "Isaac Romero" }] }
+        ]
+      }]
+    }]
+  },
+
+  "half_time": {
+    "events": [{
+      "id": "700001",
+      "date": "2026-09-20T19:00Z",
+      "competitions": [{
+        "date": "2026-09-20T19:00Z",
+        "status": { "displayClock": "45'", "type": { "id": "3", "name": "STATUS_HALFTIME", "state": "in", "completed": false, "detail": "HT" } },
+        "competitors": [
+          { "id": "243", "homeAway": "home", "score": "1", "team": { "id": "243", "displayName": "Sevilla" } },
+          { "id": "2922", "homeAway": "away", "score": "0", "team": { "id": "2922", "displayName": "Getafe" } }
+        ],
+        "details": [
+          { "type": { "id": "94", "text": "Yellow Card" }, "clock": { "displayValue": "12'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": false, "yellowCard": true, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "23'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "2", "displayName": "Isaac Romero" }] }
+        ]
+      }]
+    }]
+  },
+
+  "second_half": {
+    "events": [{
+      "id": "700001",
+      "date": "2026-09-20T19:00Z",
+      "competitions": [{
+        "date": "2026-09-20T19:00Z",
+        "status": { "displayClock": "78'", "type": { "id": "4", "name": "STATUS_SECOND_HALF", "state": "in", "completed": false, "detail": "78'" } },
+        "competitors": [
+          { "id": "243", "homeAway": "home", "score": "2", "team": { "id": "243", "displayName": "Sevilla" } },
+          { "id": "2922", "homeAway": "away", "score": "2", "team": { "id": "2922", "displayName": "Getafe" } }
+        ],
+        "details": [
+          { "type": { "id": "94", "text": "Yellow Card" }, "clock": { "displayValue": "12'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": false, "yellowCard": true, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "23'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "2", "displayName": "Isaac Romero" }] },
+          { "type": { "id": "97", "text": "Own Goal" }, "clock": { "displayValue": "55'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": true, "athletesInvolved": [{ "id": "3", "displayName": "Kike Salas" }] },
+          { "type": { "id": "98", "text": "Penalty - Scored" }, "clock": { "displayValue": "64'" }, "team": { "id": "2922" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": true, "ownGoal": false, "athletesInvolved": [{ "id": "4", "displayName": "Borja Mayoral" }] },
+          { "type": { "id": "72", "text": "Substitution" }, "clock": { "displayValue": "70'" }, "team": { "id": "243" }, "scoringPlay": false, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "5", "displayName": "Peque" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "74'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "6", "displayName": "Lukebakio" }] },
+          { "type": { "id": "93", "text": "Red Card - Second Yellow" }, "clock": { "displayValue": "76'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": true, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] }
+        ]
+      }]
+    }]
+  },
+
+  "var_reversal": {
+    "_why": "Same poll as second_half, but the 74th minute goal has been struck off by VAR. It simply disappears from details.",
+    "events": [{
+      "id": "700001",
+      "date": "2026-09-20T19:00Z",
+      "competitions": [{
+        "date": "2026-09-20T19:00Z",
+        "status": { "displayClock": "80'", "type": { "id": "4", "name": "STATUS_SECOND_HALF", "state": "in", "completed": false, "detail": "80'" } },
+        "competitors": [
+          { "id": "243", "homeAway": "home", "score": "1", "team": { "id": "243", "displayName": "Sevilla" } },
+          { "id": "2922", "homeAway": "away", "score": "2", "team": { "id": "2922", "displayName": "Getafe" } }
+        ],
+        "details": [
+          { "type": { "id": "94", "text": "Yellow Card" }, "clock": { "displayValue": "12'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": false, "yellowCard": true, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "23'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "2", "displayName": "Isaac Romero" }] },
+          { "type": { "id": "97", "text": "Own Goal" }, "clock": { "displayValue": "55'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": true, "athletesInvolved": [{ "id": "3", "displayName": "Kike Salas" }] },
+          { "type": { "id": "98", "text": "Penalty - Scored" }, "clock": { "displayValue": "64'" }, "team": { "id": "2922" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": true, "ownGoal": false, "athletesInvolved": [{ "id": "4", "displayName": "Borja Mayoral" }] }
+        ]
+      }]
+    }]
+  },
+
+  "full_time": {
+    "events": [{
+      "id": "700001",
+      "date": "2026-09-20T19:00Z",
+      "competitions": [{
+        "date": "2026-09-20T19:00Z",
+        "status": { "displayClock": "90'+4'", "type": { "id": "28", "name": "STATUS_FULL_TIME", "state": "post", "completed": true, "detail": "FT" } },
+        "competitors": [
+          { "id": "243", "homeAway": "home", "score": "2", "team": { "id": "243", "displayName": "Sevilla" } },
+          { "id": "2922", "homeAway": "away", "score": "2", "team": { "id": "2922", "displayName": "Getafe" } }
+        ],
+        "details": [
+          { "type": { "id": "94", "text": "Yellow Card" }, "clock": { "displayValue": "12'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": false, "yellowCard": true, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "23'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "2", "displayName": "Isaac Romero" }] },
+          { "type": { "id": "97", "text": "Own Goal" }, "clock": { "displayValue": "55'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": true, "athletesInvolved": [{ "id": "3", "displayName": "Kike Salas" }] },
+          { "type": { "id": "98", "text": "Penalty - Scored" }, "clock": { "displayValue": "64'" }, "team": { "id": "2922" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": true, "ownGoal": false, "athletesInvolved": [{ "id": "4", "displayName": "Borja Mayoral" }] },
+          { "type": { "id": "70", "text": "Goal" }, "clock": { "displayValue": "74'" }, "team": { "id": "243" }, "scoringPlay": true, "redCard": false, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "6", "displayName": "Lukebakio" }] },
+          { "type": { "id": "93", "text": "Red Card - Second Yellow" }, "clock": { "displayValue": "76'" }, "team": { "id": "2922" }, "scoringPlay": false, "redCard": true, "yellowCard": false, "penaltyKick": false, "ownGoal": false, "athletesInvolved": [{ "id": "1", "displayName": "Djené" }] }
+        ]
+      }]
+    }]
+  },
+
+  "other_match_only": {
+    "events": [{
+      "id": "700099",
+      "date": "2026-09-20T17:00Z",
+      "competitions": [{
+        "date": "2026-09-20T17:00Z",
+        "status": { "type": { "id": "1", "name": "STATUS_SCHEDULED", "state": "pre", "completed": false, "detail": "TBD" } },
+        "competitors": [
+          { "id": "83", "homeAway": "home", "score": "0", "team": { "id": "83", "displayName": "Barcelona" } },
+          { "id": "86", "homeAway": "away", "score": "0", "team": { "id": "86", "displayName": "Real Madrid" } }
+        ],
+        "details": []
+      }]
+    }]
+  }
+}

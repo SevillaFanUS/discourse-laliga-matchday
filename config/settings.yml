@@ -52,3 +52,40 @@ plugins:
   laliga_matchday_tags:
     client: false
     default: "la-liga,matchday"
+
+  # --- live match reporting -------------------------------------------
+  laliga_live_enabled:
+    client: false
+    default: false
+
+  # espn or mirror. The mirror (worldcup26.ir) republishes ESPN from its
+  # own cache, and is worth having only if ESPN refuses this server.
+  laliga_live_source:
+    client: false
+    default: "espn"
+
+  laliga_live_league:
+    client: false
+    default: "esp.1"
+
+  # ESPN team id. Sevilla FC is 243.
+  laliga_live_team_id:
+    client: false
+    default: "243"
+
+  # Which events get their own reply. Removing kinds makes the thread
+  # quieter; adding yellow and substitution makes it much busier.
+  laliga_live_announce:
+    client: false
+    default: "goal,own_goal,penalty_goal,penalty_missed,red,second_yellow,kickoff,half_time,full_time"
+
+  # Leave 0 to create one topic per match. Set a topic id to post every
+  # match into that topic instead.
+  laliga_live_topic_id:
+    client: false
+    default: 0
+
+  laliga_live_tags:
+    client: false
+    default: "la-liga,live"
+

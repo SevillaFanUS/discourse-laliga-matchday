@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # name: discourse-laliga-matchday
-# about: Posts an automatic preview topic before each La Liga matchday (all fixtures, kickoff times, current table) and a review topic once the round finishes (results, updated standings, top scorers).
-# version: 0.4.1
+# about: Automatic La Liga matchday previews and reviews, a full season schedule page with ICS feed, and live match threads that post each goal, card and whistle as it happens.
+# version: 0.5.0
 # authors: Chris Lail
 # url: https://forum.monchismen.com
 
@@ -21,8 +21,14 @@ after_initialize do
   require_relative "lib/laliga_matchday/matchday_service"
   require_relative "lib/laliga_matchday/schedule_builder"
   require_relative "lib/laliga_matchday/ics_builder"
+  require_relative "lib/laliga_matchday/match_event"
+  require_relative "lib/laliga_matchday/live_source"
+  require_relative "lib/laliga_matchday/live_reporter"
+  require_relative "lib/laliga_matchday/live_service"
   require_relative "app/jobs/scheduled/laliga_matchday_sync"
   require_relative "app/jobs/scheduled/laliga_schedule_cache"
+  require_relative "app/jobs/scheduled/laliga_live_poll"
+  require_relative "app/jobs/regular/laliga_live_tick"
   require_relative "app/controllers/laliga_schedule_controller"
 
   Discourse::Application.routes.append do

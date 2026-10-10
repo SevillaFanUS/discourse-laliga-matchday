@@ -131,3 +131,109 @@ su discourse -c "RAILS_ENV=production bin/rails runner '
   meaningfully different design — see the schedule plan.
 - **No match stats.** Possession, shots, xG etc. aren't on
   football-data.org's free tier. Results, standings and scorers are.
+
+---
+
+## Live match threads
+
+Follows a team through a match and posts as it happens. Off by default;
+enable `laliga_live_enabled`.
+
+A topic is created about ten minutes before kick off. Its **opening post
+is a running scoreline**, edited in place. **Each notable event gets its
+own reply.**
+
+```
+⚽ **GOAL — Sevilla 1–0 Getafe**
+23' Sevilla · Isaac Romero
+
+⚽ **GOAL (pen) — Sevilla 1–2 Getafe**
+64' Getafe · Borja Mayoral
+
+🟥 **Second yellow — Getafe**
+76' Djené
+
+⏹️ **Full time — Sevilla 2–2 Getafe**
+```
+
+That 2-2 with a sending off produces six replies. A quiet 1-0 produces
+three. Add `yellow` and `substitution` to `laliga_live_announce` and a
+busy match will produce twenty-five, which is a decision worth making
+after watching one round rather than before.
+
+### Where the data comes from
+
+Match events are read from the **scoreboard's own `details` array**, not
+from a separate play-by-play endpoint. One request returns the score and
+every event for every match that day, and there is no second host that
+can fail independently.
+
+Two interchangeable sources, same response shape:
+
+| `laliga_live_source` | Notes |
+| --- | --- |
+| `espn` *(default)* | Direct. |
+| `mirror` | worldcup26.ir, which republishes ESPN from its own cache. |
+
+The mirror is a hedge, not an equal. It is a single-maintainer project
+with no SLA — worth having configured because ESPN already refuses some
+endpoints from some servers, and switching is one setting.
+
+### Thirty seconds, on a one-minute scheduler
+
+Discourse's scheduler has one-minute granularity. So the scheduled job
+runs every minute, polls, and — only while a match is in progress —
+enqueues a single follow-up thirty seconds later.
+
+**The follow-up never enqueues another.** A self-perpetuating chain can
+outlive the match if a full-time transition is ever missed, and a job
+polling forever is a worse failure than a missed thirty-second slot.
+
+Off matchday the job costs one PluginStore read and exits.
+
+### Things that would otherwise go wrong
+
+**Duplicate announcements.** Events have no id in the feed, so a stable
+key is built from kind, minute, team and player — the player included
+because two bookings in the same minute for the same side are otherwise
+identical. A key is recorded *before* its reply is posted: a crash
+between the two should lose a message, never repeat a goal.
+
+**Own goals.** The feed files an own goal under the team that conceded
+it. The running score credits the other side.
+
+**Second yellows.** These arrive flagged as a red card, so the specific
+test runs first or every dismissal reads as a straight red.
+
+**Scheduled matches reporting 0–0.** Scores are only read once a match is
+live.
+
+**VAR.** A struck-off goal simply vanishes from the feed. That is
+detected and a short "Goal disallowed" reply follows. The original reply
+is not deleted — the thread reads as a record of what was known at the
+time.
+
+**`max_consecutive_replies`.** Discourse limits consecutive replies by
+one user, default 3. The system user should be exempt as both staff and
+topic owner, but a rejected post is logged explicitly rather than failing
+quietly, because this is the failure that would silently truncate a 4-0
+win.
+
+### Rehearsing without posting
+
+```bash
+# compare both sources from this server
+bin/rails runner plugins/discourse-laliga-matchday/script/live_probe.rb 20260920
+
+# fetch the real feed and print what WOULD be posted, changing nothing
+bin/rails runner plugins/discourse-laliga-matchday/script/live_dry_run.rb
+
+# replay a whole match offline: no Rails, no network, no database
+ruby script/live_check.rb
+```
+
+`live_check.rb` replays a full match poll by poll through the same code
+that runs live — 40 checks covering classification, running score,
+deduplication, VAR retraction and reply wording. It exists because the
+real thing can only be observed twice a month.
+
