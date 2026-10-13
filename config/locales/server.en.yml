@@ -17,6 +17,7 @@ en:
     laliga_live_league: "League slug for the live feed, e.g. esp.1."
     laliga_live_team_id: "ESPN team id to follow. Sevilla FC is 243."
     laliga_live_announce: "Comma separated event kinds that get their own reply: goal, own_goal, penalty_goal, penalty_missed, yellow, red, second_yellow, substitution, var, kickoff, half_time, full_time."
-    laliga_live_topic_id: "Topic to post live events into. Leave 0 to create one topic per match."
+    laliga_live_target: "Where live events go: matchday (the existing preview topic for that round) or own (a new topic per match)."
+    laliga_live_topic_id: "Pin every match to one specific topic. Overrides laliga_live_target. Leave 0 to use that setting."
     laliga_live_tags: "Tags applied to a match topic the plugin creates."
 

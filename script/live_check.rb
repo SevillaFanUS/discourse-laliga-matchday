@@ -11,6 +11,7 @@
 
 require "json"
 require "set"
+require "time"
 
 module ::LaligaMatchday
   PLUGIN_NAME = "discourse-laliga-matchday"
@@ -24,6 +25,11 @@ class Object; def present?; !nil?; end; end
 ROOT = File.expand_path("..", __dir__)
 require File.join(ROOT, "lib/laliga_matchday/match_event")
 require File.join(ROOT, "lib/laliga_matchday/live_reporter")
+
+# The real service loads without Rails so long as nothing calls a method
+# that needs it, so the date arithmetic is checked against the actual
+# implementation rather than a copy of it.
+require File.join(ROOT, "lib/laliga_matchday/matchday_service")
 
 FIXTURE = JSON.parse(File.read(File.join(ROOT, "spec/fixtures/espn_live_match.json")))
 SEVILLA = "243"
@@ -176,6 +182,61 @@ check("a yellow that vanishes is not announced as a disallowed goal") do
   trimmed = R.events(match_at("second_half")).reject { |e| e.kind == :yellow }
   R.retracted(trimmed, before).none? { |k| k.start_with?("yellow") }
 end
+
+puts "\nFinding the matchday topic"
+
+M = ::LaligaMatchday::MatchdayService
+
+ROUNDS = {
+  "7" => { "topic_id" => 101, "first_kickoff" => "2026-09-18T19:00:00Z", "last_kickoff" => "2026-09-21T19:00:00Z" },
+  "8" => { "topic_id" => 102, "first_kickoff" => "2026-09-25T19:00:00Z", "last_kickoff" => "2026-09-28T19:00:00Z" },
+}.freeze
+
+def covering(iso)
+  M.covering_entry(ROUNDS, Time.parse(iso))
+end
+
+check("a Saturday match lands in its own round") do
+  covering("2026-09-20T19:00:00Z")&.dig("topic_id") == 101 || covering("2026-09-20T19:00:00Z").inspect
+end
+
+check("the following round is found a week later") do
+  covering("2026-09-26T19:00:00Z")&.dig("topic_id") == 102
+end
+
+# A Friday opener is posted before the round's stored first kickoff only
+# by minutes, but a match that runs past midnight UTC finishes on the
+# next calendar day — hence a grace day at each end.
+check("a match running past midnight still matches its round") do
+  covering("2026-09-22T00:30:00Z")&.dig("topic_id") == 101
+end
+
+check("the day before the round opens still matches") do
+  covering("2026-09-17T20:00:00Z")&.dig("topic_id") == 101
+end
+
+check("a date in no round returns nothing") do
+  covering("2026-08-01T19:00:00Z").nil?
+end
+
+# With a grace day at both ends, consecutive rounds overlap. The nearer
+# kickoff has to win or a Monday match could be filed under next week.
+check("overlapping rounds resolve to the nearer one") do
+  covering("2026-09-22T19:00:00Z")&.dig("topic_id") == 101 ||
+    "got #{covering("2026-09-22T19:00:00Z").inspect}"
+end
+
+check("a round with no end time still matches on its start") do
+  one = { "9" => { "topic_id" => 103, "first_kickoff" => "2026-10-02T19:00:00Z" } }
+  M.covering_entry(one, Time.parse("2026-10-02T21:00:00Z"))&.dig("topic_id") == 103
+end
+
+check("an unparseable stored time does not raise") do
+  junk = { "9" => { "topic_id" => 104, "first_kickoff" => "not a date" } }
+  M.covering_entry(junk, Time.parse("2026-10-02T21:00:00Z")).nil?
+end
+
+check("empty storage returns nothing") { M.covering_entry({}, Time.now).nil? }
 
 puts "\nWhat gets posted"
 

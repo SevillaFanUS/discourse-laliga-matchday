@@ -56,7 +56,30 @@ puts "status:  #{status[:state]} · #{status[:detail]} · clock #{status[:clock]
 puts "score:   #{R.scoreline(match)}"
 puts
 
-puts "--- opening post would read ---"
+target = SiteSetting.laliga_live_topic_id.to_i
+if target.positive?
+  puts "would post into topic #{target} (pinned by laliga_live_topic_id)"
+elsif SiteSetting.laliga_live_target.to_s == "matchday"
+  at =
+    begin
+      Time.parse(match["date"].to_s)
+    rescue StandardError
+      Time.zone.now
+    end
+  found = ::LaligaMatchday::MatchdayService.topic_for(at)
+  if found
+    puts "would post into the matchday topic #{found}"
+  else
+    puts "no matchday topic covers this match — would create its own"
+    puts "(the preview job records topics from now on; rounds previewed"
+    puts " before this upgrade have no stored id)"
+  end
+else
+  puts "would create a topic of its own (laliga_live_target = own)"
+end
+puts
+
+puts "--- the running scoreline post would read ---"
 puts R.opening_post(match)
 puts
 

@@ -196,12 +196,37 @@ module ::LaligaMatchday
           season_label: season_label,
         )
 
-      create_topic(
-        title: builder.preview_title(matchday: candidate[:matchday], season_label: season_label),
-        raw: body,
-      )
+      post =
+        create_topic(
+          title: builder.preview_title(matchday: candidate[:matchday], season_label: season_label),
+          raw: body,
+        )
+
+      # Record where the preview landed and the window it covers. Live
+      # reporting needs to find this topic later from nothing but the
+      # current time — the live feed knows nothing about matchday
+      # numbers — so the kickoff range is stored alongside the id.
+      remember_preview_topic(candidate, post)
 
       mark_posted("previewed_matchdays", candidate[:matchday])
+    end
+
+    def remember_preview_topic(round, post)
+      return if post.blank?
+
+      stored = PluginStore.get(::LaligaMatchday::PLUGIN_NAME, state_key("preview_topics")) || {}
+
+      stored[round[:matchday].to_s] = {
+        "topic_id" => post.topic_id,
+        "first_kickoff" => round[:first_kickoff]&.iso8601,
+        "last_kickoff" => round[:last_kickoff]&.iso8601,
+      }
+
+      PluginStore.set(::LaligaMatchday::PLUGIN_NAME, state_key("preview_topics"), stored)
+    rescue => e
+      Rails.logger.warn(
+        "[#{::LaligaMatchday::PLUGIN_NAME}] could not record preview topic: #{e.message}",
+      )
     end
 
     # --- review -----------------------------------------------------------
@@ -299,6 +324,55 @@ module ::LaligaMatchday
         bypass_bump: !bump,
         edit_reason: "Results updated",
       )
+    end
+
+    # The matchday topic covering a given moment, if one was posted.
+    #
+    # Rounds are spread over several days, so the window is widened at
+    # both ends: a Friday-night opener and a Monday-night closer belong
+    # to the same round, and a match can run past midnight UTC.
+    def self.topic_for(time)
+      new.send(:preview_topic_for, time)
+    rescue StandardError => e
+      Rails.logger.warn(
+        "[#{::LaligaMatchday::PLUGIN_NAME}] could not resolve matchday topic: #{e.message}",
+      )
+      nil
+    end
+
+    # Pure: given the stored rounds and a moment, which round covers it?
+    # Kept free of PluginStore and Topic so script/live_check.rb can
+    # exercise the date arithmetic, which is the part that goes wrong.
+    GRACE = 24 * 60 * 60
+
+    def self.covering_entry(stored, time)
+      candidates =
+        Array(stored.values).filter_map do |entry|
+          from = entry["first_kickoff"] && Time.parse(entry["first_kickoff"])
+          next nil if from.nil?
+
+          to = entry["last_kickoff"] ? Time.parse(entry["last_kickoff"]) : from
+          next nil unless time >= from - GRACE && time <= to + GRACE
+
+          [entry, from]
+        end
+
+      # Rounds can overlap once the grace days are added, so prefer the
+      # one that started most recently before this moment.
+      candidates.min_by { |(_entry, from)| (time - from).abs }&.first
+    rescue StandardError
+      nil
+    end
+
+    def preview_topic_for(time)
+      stored = PluginStore.get(::LaligaMatchday::PLUGIN_NAME, state_key("preview_topics")) || {}
+
+      entry = self.class.covering_entry(stored, time)
+      topic_id = entry && entry["topic_id"]
+      return nil if topic_id.blank?
+      return nil unless Topic.exists?(id: topic_id, deleted_at: nil)
+
+      topic_id
     end
 
     def review_state

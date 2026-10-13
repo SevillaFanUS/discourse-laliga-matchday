@@ -88,8 +88,9 @@ module ::LaligaMatchday
       topic_id = ensure_topic
       return :no_topic if topic_id.nil?
 
+      ensure_live_post(topic_id)
       announce_new_events(status)
-      update_opening_post(topic_id)
+      update_live_post
 
       persist
       status[:completed] ? :finished : :updated
@@ -127,10 +128,41 @@ module ::LaligaMatchday
       Time.zone.now >= at - LiveService::LEAD_MINUTES.minutes
     end
 
+    # Three ways to land on a topic, in order of preference:
+    #
+    #   1. laliga_live_topic_id, if an admin has pinned one explicitly
+    #   2. the matchday preview topic covering today, when the target is
+    #      "matchday" — the thread people are already reading
+    #   3. a topic of its own
+    #
+    # Falling back rather than failing matters: the preview only exists
+    # if the preview job ran, and a missing thread should not cost a
+    # match's coverage.
     def ensure_topic
       forced = SiteSetting.laliga_live_topic_id.to_i
       return forced if forced.positive?
 
+      if SiteSetting.laliga_live_target.to_s == "matchday"
+        existing = @match_state["topic_id"]
+        return existing if existing.present? && Topic.exists?(id: existing, deleted_at: nil)
+
+        found = ::LaligaMatchday::MatchdayService.topic_for(kickoff_at || Time.zone.now)
+
+        if found
+          @match_state["topic_id"] = found
+          @match_state["joined"] = true
+          return found
+        end
+
+        Rails.logger.info(
+          "[#{::LaligaMatchday::PLUGIN_NAME}] no matchday topic covers this match; using its own",
+        )
+      end
+
+      own_topic
+    end
+
+    def own_topic
       existing = @match_state["topic_id"]
       return existing if existing.present? && Topic.exists?(id: existing, deleted_at: nil)
 
@@ -145,11 +177,38 @@ module ::LaligaMatchday
         )
 
       @match_state["topic_id"] = post.topic_id
+      # The topic's own first post is the scoreline when we created it.
       @match_state["post_id"] = post.id
+      @match_state["joined"] = false
       post.topic_id
     rescue => e
       Rails.logger.error("[#{::LaligaMatchday::PLUGIN_NAME}] could not create live topic: #{e.message}")
       nil
+    end
+
+    # The running scoreline lives in a post this plugin owns. In a topic
+    # of our own that is the opening post; in somebody else's matchday
+    # thread it has to be a reply, because the first post there is the
+    # preview — fixtures and the table — and overwriting it would delete
+    # the thing people opened the thread for.
+    def ensure_live_post(topic_id)
+      existing = @match_state["post_id"]
+      return if existing.present? && Post.exists?(id: existing, deleted_at: nil)
+
+      post =
+        PostCreator.create!(
+          Discourse.system_user,
+          topic_id: topic_id.to_i,
+          raw: ::LaligaMatchday::LiveReporter.opening_post(@match, kickoff_line: kickoff_line),
+          skip_validations: true,
+        )
+
+      @match_state["post_id"] = post.id
+      @match_state["digest"] = nil
+    rescue => e
+      Rails.logger.error(
+        "[#{::LaligaMatchday::PLUGIN_NAME}] could not create the live scoreline post: #{e.message}",
+      )
     end
 
     def topic_title
@@ -263,7 +322,7 @@ module ::LaligaMatchday
       )
     end
 
-    def update_opening_post(_topic_id)
+    def update_live_post
       post_id = @match_state["post_id"]
       return if post_id.blank?
 
