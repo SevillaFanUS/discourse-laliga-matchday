@@ -222,6 +222,12 @@ win.
 ### Rehearsing without posting
 
 ```bash
+# what is stored, and which topic would be chosen right now
+bin/rails runner plugins/discourse-laliga-matchday/script/live_state.rb
+
+# record preview topics that already exist (report only without --write)
+bin/rails runner plugins/discourse-laliga-matchday/script/backfill_preview_topics.rb
+
 # compare both sources from this server
 bin/rails runner plugins/discourse-laliga-matchday/script/live_probe.rb 20260920
 

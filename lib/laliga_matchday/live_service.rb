@@ -144,11 +144,31 @@ module ::LaligaMatchday
 
       if SiteSetting.laliga_live_target.to_s == "matchday"
         existing = @match_state["topic_id"]
-        return existing if existing.present? && Topic.exists?(id: existing, deleted_at: nil)
+
+        # Only treat a cached topic as settled if it is actually the
+        # matchday thread, or if something has already been announced
+        # into it. Otherwise one early lookup miss would pin the whole
+        # match to a thread of its own with no way back — which is how
+        # this failed the first time it ran for real.
+        settled =
+          existing.present? && Topic.exists?(id: existing, deleted_at: nil) &&
+            (@match_state["joined"] || Array(@match_state["announced"]).any?)
+
+        return existing if settled
 
         found = ::LaligaMatchday::MatchdayService.topic_for(kickoff_at || Time.zone.now)
 
         if found
+          if @match_state["topic_id"].present? && @match_state["topic_id"] != found
+            Rails.logger.info(
+              "[#{::LaligaMatchday::PLUGIN_NAME}] moving live coverage to matchday topic #{found}",
+            )
+            # The scoreline post belongs to the old topic; drop the
+            # reference so a fresh one is created in the right place.
+            @match_state["post_id"] = nil
+            @match_state["digest"] = nil
+          end
+
           @match_state["topic_id"] = found
           @match_state["joined"] = true
           return found

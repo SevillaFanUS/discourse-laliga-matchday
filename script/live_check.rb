@@ -238,6 +238,48 @@ end
 
 check("empty storage returns nothing") { M.covering_entry({}, Time.now).nil? }
 
+# The title fallback is the strategy that will actually run on a site
+# that was already live, so the SQL LIKE pattern has to match what the
+# builder really produces.
+puts "\nMatching preview topics by title"
+
+def preview_title(competition, matchday, season)
+  "#{competition} Matchday #{matchday} Preview — #{season}"
+end
+
+def like_match?(title, season)
+  pattern = "%Matchday %Preview%#{season}%"
+  regexp = Regexp.new("\\A" + Regexp.escape(pattern).gsub("%", ".*") + "\\z")
+  !!(title =~ regexp)
+end
+
+check("the pattern matches a real preview title") do
+  like_match?(preview_title("La Liga", 9, "2026/27"), "2026/27") ||
+    preview_title("La Liga", 9, "2026/27")
+end
+
+check("it matches a two-digit matchday") do
+  like_match?(preview_title("La Liga", 28, "2026/27"), "2026/27")
+end
+
+check("it does not match the results topic") do
+  !like_match?("La Liga Matchday 9 Results — 2026/27", "2026/27")
+end
+
+check("it does not match a different season") do
+  !like_match?(preview_title("La Liga", 9, "2025/26"), "2026/27")
+end
+
+check("it does not match an unrelated topic") do
+  !like_match?("Matchday thoughts and previews", "2026/27")
+end
+
+# A live match thread the plugin created itself must never be mistaken
+# for the preview, or coverage would chase its own tail.
+check("it does not match a live match topic") do
+  !like_match?("Sevilla v Real Madrid — Live — 18 Oct 2026", "2026/27")
+end
+
 puts "\nWhat gets posted"
 
 goal = R.events(match_at("first_half")).find { |e| e.kind == :goal }

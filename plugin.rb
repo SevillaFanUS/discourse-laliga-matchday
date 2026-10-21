@@ -2,7 +2,7 @@
 
 # name: discourse-laliga-matchday
 # about: Automatic La Liga matchday previews and reviews, a full season schedule page with ICS feed, and live match threads that post each goal, card and whistle as it happens.
-# version: 0.5.1
+# version: 0.5.2
 # authors: Chris Lail
 # url: https://forum.monchismen.com
 
