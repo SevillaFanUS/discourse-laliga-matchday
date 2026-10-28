@@ -142,7 +142,10 @@ module ::LaligaMatchday
       forced = SiteSetting.laliga_live_topic_id.to_i
       return forced if forced.positive?
 
-      if SiteSetting.laliga_live_target.to_s == "matchday"
+      target = SiteSetting.laliga_live_target.to_s
+      target = "fixture" if target.empty?
+
+      if %w[fixture matchday].include?(target)
         existing = @match_state["topic_id"]
 
         # Only treat a cached topic as settled if it is actually the
@@ -156,7 +159,7 @@ module ::LaligaMatchday
 
         return existing if settled
 
-        found = ::LaligaMatchday::MatchdayService.topic_for(kickoff_at || Time.zone.now)
+        found = resolve_topic(target)
 
         if found
           if @match_state["topic_id"].present? && @match_state["topic_id"] != found
@@ -180,6 +183,38 @@ module ::LaligaMatchday
       end
 
       own_topic
+    end
+
+    # Tried in order, most precise first:
+    #
+    #   1. the match thread discourse-sevilla-fixtures made for this
+    #      fixture, which it records by topic id — an exact lookup
+    #   2. the matchday preview topic for the round, matched on dates
+    #   3. nothing, and the caller makes its own
+    #
+    # Only step 2 onward applies when the target is "matchday", which is
+    # there for sites not running the fixtures plugin.
+    def resolve_topic(target)
+      at = kickoff_at || Time.zone.now
+
+      if target == "fixture"
+        sides = ::LaligaMatchday::LiveReporter.sides(@match)
+        found =
+          ::LaligaMatchday::FixtureTopicFinder.topic_id_for(
+            kickoff: at,
+            home: sides[:home].dig("team", "displayName"),
+            away: sides[:away].dig("team", "displayName"),
+          )
+
+        if found
+          @match_state["matched_by"] = "fixture"
+          return found
+        end
+      end
+
+      found = ::LaligaMatchday::MatchdayService.topic_for(at)
+      @match_state["matched_by"] = "matchday" if found
+      found
     end
 
     def own_topic

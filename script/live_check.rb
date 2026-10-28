@@ -30,6 +30,7 @@ require File.join(ROOT, "lib/laliga_matchday/live_reporter")
 # that needs it, so the date arithmetic is checked against the actual
 # implementation rather than a copy of it.
 require File.join(ROOT, "lib/laliga_matchday/matchday_service")
+require File.join(ROOT, "lib/laliga_matchday/fixture_topic_finder")
 
 FIXTURE = JSON.parse(File.read(File.join(ROOT, "spec/fixtures/espn_live_match.json")))
 SEVILLA = "243"
@@ -241,6 +242,76 @@ check("empty storage returns nothing") { M.covering_entry({}, Time.now).nil? }
 # The title fallback is the strategy that will actually run on a site
 # that was already live, so the SQL LIKE pattern has to match what the
 # builder really produces.
+puts "\nMatching the fixture match thread"
+
+F = ::LaligaMatchday::FixtureTopicFinder
+
+KICKOFF = Time.parse("2026-10-18T19:00:00Z")
+
+def candidate(topic_id, at, home, away)
+  { topic_id: topic_id, at: Time.parse(at), home: home, away: away }
+end
+
+SEVILLA_V_MADRID = [
+  candidate(3001, "2026-10-18T19:00:00Z", "Real Madrid CF", "Sevilla FC"),
+].freeze
+
+check("an exact fixture on the day is chosen") do
+  F.pick(SEVILLA_V_MADRID, kickoff: KICKOFF, home: "Real Madrid", away: "Sevilla")
+    &.dig(:topic_id) == 3001
+end
+
+# football-data and ESPN spell clubs differently; the join has to survive
+# "Real Madrid CF" against "Real Madrid".
+check("provider name differences do not break the match") do
+  F.pick(SEVILLA_V_MADRID, kickoff: KICKOFF, home: "Real Madrid", away: "Sevilla")&.dig(:topic_id) == 3001
+end
+
+check("kickoff an hour out still matches") do
+  F.pick(SEVILLA_V_MADRID, kickoff: KICKOFF + 3600, home: "Real Madrid", away: "Sevilla")
+    &.dig(:topic_id) == 3001
+end
+
+check("a fixture on another day is rejected") do
+  far = [candidate(3002, "2026-10-25T19:00:00Z", "Sevilla FC", "Getafe CF")]
+  F.pick(far, kickoff: KICKOFF, home: "Real Madrid", away: "Sevilla").nil?
+end
+
+# Two Sevilla matches cannot share a day, but a stale record could land
+# in the window, so the closer and better-named one has to win.
+check("the nearer of two same-window fixtures wins") do
+  two = [
+    candidate(3003, "2026-10-18T06:00:00Z", "Sevilla FC", "Girona FC"),
+    candidate(3004, "2026-10-18T19:00:00Z", "Real Madrid CF", "Sevilla FC"),
+  ]
+  F.pick(two, kickoff: KICKOFF, home: "Real Madrid", away: "Sevilla")&.dig(:topic_id) == 3004
+end
+
+# "Real" appears in both Real Madrid and Real Sociedad, so it must not be
+# what decides a match.
+check("a shared generic word is not enough to match") do
+  sociedad = [candidate(3005, "2026-10-18T19:00:00Z", "Real Sociedad", "Athletic Club")]
+  F.pick(sociedad, kickoff: KICKOFF, home: "Real Madrid", away: "Sevilla").nil?
+end
+
+check("club suffixes are ignored when tokenising") do
+  F.tokens("Real Madrid CF").include?("madrid") && !F.tokens("Real Madrid CF").include?("real")
+end
+
+check("accents fold so Atlético matches Atletico") do
+  F.tokens("Atlético Madrid").include?("atletico")
+end
+
+check("no candidates returns nothing rather than raising") do
+  F.pick([], kickoff: KICKOFF, home: "A", away: "B").nil? &&
+    F.pick(nil, kickoff: KICKOFF, home: "A", away: "B").nil?
+end
+
+check("a record with a nil date does not raise") do
+  broken = [{ topic_id: 3006, at: nil, home: "Sevilla FC", away: "Getafe CF" }]
+  F.pick(broken, kickoff: KICKOFF, home: "Sevilla", away: "Getafe").nil?
+end
+
 puts "\nMatching preview topics by title"
 
 def preview_title(competition, matchday, season)

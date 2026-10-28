@@ -2,7 +2,7 @@
 
 # name: discourse-laliga-matchday
 # about: Automatic La Liga matchday previews and reviews, a full season schedule page with ICS feed, and live match threads that post each goal, card and whistle as it happens.
-# version: 0.5.2
+# version: 0.6.1
 # authors: Chris Lail
 # url: https://forum.monchismen.com
 
@@ -22,6 +22,7 @@ after_initialize do
   require_relative "lib/laliga_matchday/schedule_builder"
   require_relative "lib/laliga_matchday/ics_builder"
   require_relative "lib/laliga_matchday/match_event"
+  require_relative "lib/laliga_matchday/fixture_topic_finder"
   require_relative "lib/laliga_matchday/live_source"
   require_relative "lib/laliga_matchday/live_reporter"
   require_relative "lib/laliga_matchday/live_service"

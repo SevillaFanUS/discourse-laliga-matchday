@@ -10,6 +10,15 @@ require "time"
 
 at = ARGV[0] ? Time.parse(ARGV[0]) : Time.zone.now
 
+# Printed first because "the fix is not deployed" has now been the
+# answer twice, and it is cheaper to see the version than to infer it
+# from behaviour.
+version = File.read(File.join(__dir__, "..", "plugin.rb"))[/^# version: (\S+)/, 1]
+puts "plugin version: #{version}"
+has_finder = File.exist?(File.join(__dir__, "..", "lib/laliga_matchday/fixture_topic_finder.rb"))
+puts "fixture finder: #{has_finder ? "present" : "ABSENT — this build cannot use match threads"}"
+puts
+
 puts "settings"
 puts "  laliga_live_enabled:  #{SiteSetting.laliga_live_enabled}"
 puts "  laliga_live_target:   #{SiteSetting.laliga_live_target}"
@@ -38,6 +47,27 @@ else
       topic ? topic.title : "(topic missing)",
     )
   end
+end
+puts
+
+puts "fixture match threads (discourse-sevilla-fixtures)"
+if ::LaligaMatchday::FixtureTopicFinder.available?
+  column = ::LaligaMatchday::FixtureTopicFinder.date_column
+  puts "  model present, date column: #{column.inspect}"
+  if column
+    near =
+      SevillaFixture
+        .where.not(discourse_topic_id: nil)
+        .where("#{column} >= ? AND #{column} <= ?", at - 18 * 3600, at + 18 * 3600)
+    puts "  #{near.count} fixture(s) with a thread within 18h of that time"
+    near.each do |f|
+      topic = Topic.find_by(id: f.discourse_topic_id)
+      puts format("    topic %-7s %s v %s  %s", f.discourse_topic_id, f.home_team, f.away_team, topic&.title)
+    end
+  end
+else
+  puts "  SevillaFixture not available — the fixtures plugin is not installed,"
+  puts "  so live updates will use the matchday preview instead."
 end
 puts
 

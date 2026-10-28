@@ -79,12 +79,14 @@ plugins:
     client: false
     default: "goal,own_goal,penalty_goal,penalty_missed,red,second_yellow,kickoff,half_time,full_time"
 
-  # matchday = post into the preview topic for the round this match
-  # belongs to, falling back to its own topic if there isn't one.
-  # own = always create a topic per match.
+  # fixture  = the match thread discourse-sevilla-fixtures created for
+  #            this game, falling back to the matchday preview, then to
+  #            a topic of its own
+  # matchday = skip the match thread and use the matchday preview
+  # own      = always create a topic per match
   laliga_live_target:
     client: false
-    default: "matchday"
+    default: "fixture"
 
   # Overrides laliga_live_target when set. Leave 0 unless you want every
   # match posted into one specific topic.
